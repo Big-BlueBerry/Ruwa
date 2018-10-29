@@ -19,7 +19,7 @@ namespace Assets.Scripts
         public float NoteSpeed = 1;
 
         //public Queue<float> Notes = new Queue<float>();
-        public List<Note> Notes = new List<Note>();
+        public List<ShortNote> Notes = new List<ShortNote>();
 
         public float sync = 0;
         private int n = 0;
@@ -35,11 +35,11 @@ namespace Assets.Scripts
                 foreach (var b in Enumerable.Range(1, 4))
                 {
                     var CurNoteGO = Instantiate(NotePrefab, NoteContainer.transform);
-                    var CurNote = CurNoteGO.GetComponent<Note>();
+                    var CurNote = CurNoteGO.GetComponent<ShortNote>();
 
                     CurNote.Timing = GetTime(a, b, 4, 143);
-                    CurNote.Position = ran.Next(14)+1;
-                    CurNote.Width = ran.Next(3)+1;
+                    CurNote.Position = ran.Next(4)+1;
+                    CurNote.Width = 1;
 
                     Notes.Add(CurNote);
 
@@ -72,8 +72,7 @@ namespace Assets.Scripts
 
             MissCheck();
             
-            //JudgeNote();
-            
+            JudgeNote();
         }
 
         private void JudgeNote()
@@ -82,12 +81,39 @@ namespace Assets.Scripts
 
             for (var i = 1; i <= 16; i++)
             {
-                if (!InputManager.IsPressed(i)) break;
-
+                if (!InputManager.IsPressed(i)) continue;
+                
                 var cnt = 0;
                 while (true)
                 {
-                    if (Notes[cnt].Timing + sync - nowTime > JUDGE * 4) break;
+                    if (Notes[cnt++].Timing + sync - nowTime > JUDGE * 4) break;
+
+                    var curNote = Notes[cnt - 1];
+
+                    Debug.Log(curNote.Position + " / " + curNote.Width);
+
+                    if (curNote.Position <= i && curNote.Position + curNote.Width - 1 >= i)
+                    {
+                        if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE)
+                        {
+                            TestText2.text = n++ + "\t" + "JUSTICE";
+                        }
+                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 2.5)
+                        {
+                            TestText2.text = n++ + "\t" + "PERFECT";
+                        }
+                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 4)
+                        {
+                            TestText2.text = n++ + "\t" + "ATTACK";
+                        }
+                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 5)
+                        {
+                            TestText2.text = n++ + "\t" + "MISS";
+                        }
+
+                        Notes.RemoveAt(cnt-- - 1);
+                        Destroy(curNote.gameObject);
+                    }
                 }
             }
         }
@@ -96,6 +122,7 @@ namespace Assets.Scripts
         {
             while (BackgroundMusicSource.time - (Notes.First().Timing + sync) > JUDGE * 4)
             {
+                TestText2.text = n++ + "\t" + "MISS";
                 Destroy(Notes.First().gameObject);
                 Notes.RemoveAt(0);
             }

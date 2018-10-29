@@ -8,3 +8,10 @@ public class Note : MonoBehaviour
     public int Position;
     public int Width;
 }
+
+public class ShortNote : Note { }
+
+public class LongNote : Note
+{
+
+}
