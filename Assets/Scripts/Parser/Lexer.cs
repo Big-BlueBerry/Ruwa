@@ -90,7 +90,7 @@ namespace Ruwa.Objects
                         }
                         else
                         {
-                            throw new Exception($"Undeclared lette: {Peek}");
+                            throw new Exception($"Undeclared letter: {Peek}");
                         }
                         break;
                 }
@@ -105,42 +105,10 @@ namespace Ruwa.Objects
                 Pop();
             }
         }
-        private void LexNumber()
-        {
-            int beginIndex = Index;
-            int endIndex = Index;
-            while (!IsEof && char.IsDigit(Peek))
-            {
-                Pop();
-                endIndex++;
-            }
-            int lenght = endIndex - beginIndex;
-            TokenList.Add(new NumberLiteral(int
-                .Parse(SheetFile
-                .Substring(beginIndex, lenght))));
-        }
         private void LineComsumer()
         {
             while (Peek == '-') Pop();
             TokenList.Add(new LineToken());
-        }
-        private void LexString()
-        {
-            Pop();
-            int beginIndex = Index;
-            int endIndex = Index;
-            while (Peek != '\"')
-            {
-                if (IsEof)
-                {
-                    throw new Exception("아직 스트링이 끝난게 아닌데.... 파일이 끝났네요....");
-                }
-                Pop();
-                endIndex++;
-            }
-            Pop();
-            int lenght = endIndex - beginIndex;
-            TokenList.Add(new StringLiteral(SheetFile.Substring(beginIndex, lenght)));
         }
         private void LexKeyword()
         {
@@ -170,6 +138,38 @@ namespace Ruwa.Objects
                     throw new Exception($"{text}는 뭐죠??");
             }
 
+        }
+        private void LexNumber()
+        {
+            int beginIndex = Index;
+            int endIndex = Index;
+            while (!IsEof && char.IsDigit(Peek))
+            {
+                Pop();
+                endIndex++;
+            }
+            int lenght = endIndex - beginIndex;
+            TokenList.Add(new ValueLiteral<int>(int
+                .Parse(SheetFile
+                .Substring(beginIndex, lenght))));
+        }
+        private void LexString()
+        {
+            Pop();
+            int beginIndex = Index;
+            int endIndex = Index;
+            while (Peek != '\"')
+            {
+                if (IsEof)
+                {
+                    throw new Exception("아직 스트링이 끝난게 아닌데.... 파일이 끝났네요....");
+                }
+                Pop();
+                endIndex++;
+            }
+            Pop();
+            int lenght = endIndex - beginIndex;
+            TokenList.Add(new ValueLiteral<string>(SheetFile.Substring(beginIndex, lenght)));
         }
     }
 }

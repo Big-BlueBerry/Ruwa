@@ -75,7 +75,9 @@ namespace Ruwa.Objects
         /// <returns>Dump points removed point list</returns>
         public Song PostProcess(Song song)
         {
-            Func<GameObject, bool> isNotDump = (x) => x is Holdable holdable ? !holdable.IsDump : true; 
+            Func<GameObject, bool> isNotDump = (x) => x is Holdable holdable 
+                ? !holdable.IsDump 
+                : true; 
             var gameObject = song.SongSheet.Points;
             var result = gameObject.Where(isNotDump).ToList();
 
@@ -85,6 +87,7 @@ namespace Ruwa.Objects
             resultSong.SongSheet.Points = result;
             return resultSong;
         }
+
         #region Parse
         private Metadata ParseMetadata()
         {
@@ -93,17 +96,17 @@ namespace Ruwa.Objects
 
             Eat(TokenType.SongNameKeyword);
             Eat(TokenType.EqualToken);
-            var songName = Eat(TokenType.StringLiteral) as StringLiteral;
+            var songName = Eat(TokenType.ValueLiteral) as ValueLiteral<string>;
             metadata.SongName = songName.Value;
 
             Eat(TokenType.SongComposerKeyword);
             Eat(TokenType.EqualToken);
-            var songComposer = Eat(TokenType.StringLiteral) as StringLiteral;
+            var songComposer = Eat(TokenType.ValueLiteral) as ValueLiteral<string>;
             metadata.SongComposer = songComposer.Value;
 
             Eat(TokenType.SheetComposerKeyword);
             Eat(TokenType.EqualToken);
-            var sheetComposer = Eat(TokenType.StringLiteral) as StringLiteral;
+            var sheetComposer = Eat(TokenType.ValueLiteral) as ValueLiteral<string>;
             metadata.SheetComposer = sheetComposer.Value;
             
             while (true)
@@ -119,12 +122,12 @@ namespace Ruwa.Objects
         {
             BPMData bpmData = new BPMData();
 
-            var bar = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var bar = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             bpmData.Bar = bar.Value;
 
             Eat(TokenType.BarToken);
 
-            var bpm = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var bpm = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             bpmData.BPM = bpm.Value;
 
             return bpmData;
@@ -144,7 +147,7 @@ namespace Ruwa.Objects
         }
         private GameObject ParseGameObject()
         {
-            NumberLiteral TypeToken = Peek as NumberLiteral;
+            ValueLiteral<int> TypeToken = Peek as ValueLiteral<int>;
             switch (TypeToken.Value)
             {
                 case (int)GameObjectType.Tab:
@@ -181,10 +184,10 @@ namespace Ruwa.Objects
             point = ParsePoint();
 
             Eat(TokenType.ColonToken);
-            NumberLiteral attribute = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral id = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> id = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
 
             // 끝점일 때, 시작점 불러와 반환
             if (HoldPoint.ContainsKey(id.Value))
@@ -218,10 +221,10 @@ namespace Ruwa.Objects
             point = ParsePoint();
 
             Eat(TokenType.ColonToken);
-            NumberLiteral attribute = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral id = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> id = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
 
             // 끝점일 때, 값 불러와 시작점, 끝점 기록후 중간 점은 리스트에 담아 리턴
             if (attribute.Value == (int)GameObjectAttibuteType.End 
@@ -279,10 +282,10 @@ namespace Ruwa.Objects
             point = ParsePoint();
 
             Eat(TokenType.ColonToken);
-            NumberLiteral attribute = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral id = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> id = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
 
             // 끝점일 때, 시작점 불러와 작성후 리턴
             if (AirLongPoint.ContainsKey(id.Value))
@@ -315,7 +318,7 @@ namespace Ruwa.Objects
             AirMove airMove = new AirMove();
             airMove.BeginPoint = ParsePoint();
             Eat(TokenType.ColonToken);
-            var direction = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            ValueLiteral<int> direction = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
 
 
             switch (direction.Value)
@@ -338,26 +341,26 @@ namespace Ruwa.Objects
         private Point ParsePoint()
         {
             Point point = new Point();
-            Eat(TokenType.NumberLiteral);
+            Eat(TokenType.ValueLiteral);
             Eat(TokenType.CommaToken);
 
-            NumberLiteral bar = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var bar = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             point.Bar = bar.Value;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral curBeat = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var curBeat = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             point.CurBeat = curBeat.Value;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral fullBeat = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var fullBeat = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             point.FullBeat = fullBeat.Value;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral postion = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var postion = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             point.Position = postion.Value;
             Eat(TokenType.CommaToken);
 
-            NumberLiteral size = Eat(TokenType.NumberLiteral) as NumberLiteral;
+            var size = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
             point.Size = size.Value;
 
             return point;

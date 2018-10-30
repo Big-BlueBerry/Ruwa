@@ -11,23 +11,21 @@
         CommaToken,
         EqualToken,
         EmptyToken,
-        NumberLiteral,
-        StringLiteral,
+        ValueLiteral
     }
+
     abstract class Token
     {
         public TokenType Type { get; set; }
         public Token() => Type = TokenType.EmptyToken;
+        public virtual string ToString() => Type.ToString();
     }
+
     class SongNameKeyword : Token
     {
         public SongNameKeyword()
         {
             Type = TokenType.SongNameKeyword;
-        }
-        public override string ToString()
-        {
-            return "SongNameKeyword";
         }
     }
     class SongComposerKeyword : Token
@@ -36,10 +34,6 @@
         {
             Type = TokenType.SongComposerKeyword;
         }
-        public override string ToString()
-        {
-            return "SongComposerKeyword";
-        }
     }
     class SheetComposerKeyword : Token
     {
@@ -47,20 +41,13 @@
         {
             Type = TokenType.SheetComposerKeyword;
         }
-        public override string ToString()
-        {
-            return "SheetComposerKeyword";
-        }
     }
+
     class BarToken : Token
     {
         public BarToken()
         {
             Type = TokenType.BarToken;
-        }
-        public override string ToString()
-        {
-            return "Bar";
         }
     }
     class LineToken : Token
@@ -69,20 +56,12 @@
         {
             Type = TokenType.LineToken;
         }
-        public override string ToString()
-        {
-            return "Line";
-        }
     }
     class ColonToken : Token
     {
         public ColonToken()
         {
             Type = TokenType.ColonToken;
-        }
-        public override string ToString()
-        {
-            return "Colon";
         }
     }
     class CommaToken : Token
@@ -91,10 +70,6 @@
         {
             Type = TokenType.CommaToken;
         }
-        public override string ToString()
-        {
-            return "Comma";
-        }
     }
     class EqualToken : Token
     {
@@ -102,35 +77,14 @@
         {
             Type = TokenType.EqualToken;
         }
-        public override string ToString()
-        {
-            return "Equal";
-        }
     }
-    class NumberLiteral : Token
+
+    class ValueLiteral<T> : Token
     {
-        public int Value { get; set; }
-        public NumberLiteral(int value)
+        public T Value { get; set; }
+        public ValueLiteral(T value)
         {
-            Type = TokenType.NumberLiteral;
-            Value = value;
-        }
-        public override string ToString()
-        {
-            return Value.ToString();
-        }
-    }
-    class StringLiteral : Token
-    {
-        public string Value { get; set; }
-        public StringLiteral(string value)
-        {
-            Type = TokenType.StringLiteral;
-            Value = value;
-        }
-        public override string ToString()
-        {
-            return Value.ToString();
+            this.Value = value;
         }
     }
 }

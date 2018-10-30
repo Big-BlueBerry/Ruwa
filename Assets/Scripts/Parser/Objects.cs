@@ -39,7 +39,7 @@ namespace Ruwa.Objects
         public Point BeginPoint { get; set; }
     }
     abstract class Unholdable : GameObject { }
-    abstract class Holdable : GameObject
+    abstract class Holdable: GameObject
     {
         public bool IsDump;
         public Point EndPoint { get; set; }
