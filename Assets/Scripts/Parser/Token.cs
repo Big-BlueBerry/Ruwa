@@ -87,5 +87,6 @@
             this.Value = value;
             this.Type = TokenType.ValueLiteral;
         }
+        public override string ToString() => $"Value {Value}"; 
     }
 }
