@@ -85,6 +85,7 @@
         public ValueLiteral(T value)
         {
             this.Value = value;
+            this.Type = TokenType.ValueLiteral;
         }
     }
 }
