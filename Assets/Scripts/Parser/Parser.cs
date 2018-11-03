@@ -9,9 +9,9 @@ namespace Ruwa.Objects
     class Parser
     {
         private Token[] TokenArray;
-        private Dictionary<int, Point> HoldPoint = new Dictionary<int, Point>();
-        private Dictionary<int, List<Point>> SlidePoint = new Dictionary<int, List<Point>>();
-        private Dictionary<int, Point> AirLongPoint = new Dictionary<int, Point>();
+        private Dictionary<int, Keyframe> HoldPoint = new Dictionary<int, Keyframe>();
+        private Dictionary<int, List<Keyframe>> SlidePoint = new Dictionary<int, List<Keyframe>>();
+        private Dictionary<int, Keyframe> AirLongPoint = new Dictionary<int, Keyframe>();
 
         private int Index = 0;
         private Token Peek => TokenArray[Index];
@@ -72,11 +72,11 @@ namespace Ruwa.Objects
         /// <summary>
         /// Remove all dump points
         /// </summary>
-        /// <returns>Dump points removed point list</returns>
+        /// <returns>Dump points removed keyframe list</returns>
         public Song PostProcess(Song song)
         {
-            Func<GameObject, bool> isNotDump = (x) => x is Holdable holdable 
-                ? !holdable.IsDump 
+            Func<Note, bool> isNotDump = (x) => x is Holdable
+                ? !((Holdable)x).IsDump 
                 : true; 
             var gameObject = song.SongSheet.Points;
             var result = gameObject.Where(isNotDump).ToList();
@@ -135,7 +135,7 @@ namespace Ruwa.Objects
         private Sheet ParseSheet()
         {
             Sheet sheet = new Sheet();
-            sheet.Points = new List<GameObject>();
+            sheet.Points = new List<Note>();
 
             while (!IsEndOfToken)
             {
@@ -145,7 +145,7 @@ namespace Ruwa.Objects
 
             return sheet;
         }
-        private GameObject ParseGameObject()
+        private Note ParseGameObject()
         {
             ValueLiteral<int> TypeToken = Peek as ValueLiteral<int>;
             switch (TypeToken.Value)
@@ -175,13 +175,13 @@ namespace Ruwa.Objects
         private Tab ParseTab()
         {
             Tab tab = new Tab();
-            tab.BeginPoint = ParsePoint();
+            tab.BeginKeyframe = ParsePoint();
             return tab;
         }
         private Hold ParseHold()
         {
-            Point point = new Point();
-            point = ParsePoint();
+            Keyframe keyframe = new Keyframe();
+            keyframe = ParsePoint();
 
             Eat(TokenType.ColonToken);
             ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
@@ -193,8 +193,8 @@ namespace Ruwa.Objects
             if (HoldPoint.ContainsKey(id.Value))
             {
                 Hold hold = new Hold();
-                hold.BeginPoint = HoldPoint[id.Value];
-                hold.EndPoint = point;
+                hold.BeginKeyframe = HoldPoint[id.Value];
+                hold.EndKeyframe = keyframe;
 
                 HoldPoint.Remove(id.Value);
                 return hold;
@@ -203,7 +203,7 @@ namespace Ruwa.Objects
             // 시작점일 때, 점 저장
             else if (attribute.Value == (int)GameObjectAttibuteType.Begin)
             {
-                HoldPoint.Add(id.Value, point);
+                HoldPoint.Add(id.Value, keyframe);
                 Hold hold = new Hold();
                 hold.IsDump = true;
                 return hold;
@@ -212,13 +212,13 @@ namespace Ruwa.Objects
             // 폭발
             else
             {
-                throw new Exception($"Unexcepted end token {point}");
+                throw new Exception($"Unexcepted end token {keyframe}");
             }
         }
         private Slide ParseSlide()
         {
-            Point point = new Point();
-            point = ParsePoint();
+            Keyframe keyframe = new Keyframe();
+            keyframe = ParsePoint();
 
             Eat(TokenType.ColonToken);
             ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
@@ -231,11 +231,11 @@ namespace Ruwa.Objects
                 && SlidePoint.ContainsKey(id.Value))
             {
                 Slide slide = new Slide();
-                slide.EndPoint = point;
+                slide.EndKeyframe = keyframe;
 
                
                 var slideList = SlidePoint[id.Value];
-                slide.BeginPoint = slideList.First();
+                slide.BeginKeyframe = slideList.First();
                 slideList.RemoveAt(0);
 
                 slide.Points = slideList;
@@ -247,7 +247,7 @@ namespace Ruwa.Objects
             // 점일 때, 슬라이드 중간점 리스트에 삽입
             else if (attribute.Value == (int)GameObjectAttibuteType.Point)
             {
-                SlidePoint[id.Value].Add(point);
+                SlidePoint[id.Value].Add(keyframe);
                 Slide slide = new Slide();
                 slide.IsDump = true;
                 return slide;
@@ -256,8 +256,8 @@ namespace Ruwa.Objects
             // 시작점일 때, 시작점 저장.
             else if (attribute.Value == (int)GameObjectAttibuteType.Begin)
             {                
-                SlidePoint[id.Value] = new List<Point>();
-                SlidePoint[id.Value].Add(point);
+                SlidePoint[id.Value] = new List<Keyframe>();
+                SlidePoint[id.Value].Add(keyframe);
 
                 Slide slide = new Slide();
                 slide.IsDump = true;
@@ -267,19 +267,19 @@ namespace Ruwa.Objects
             // 폭발
             else
             {
-                throw new Exception($"Unexcepted end token {point}");
+                throw new Exception($"Unexcepted end token {keyframe}");
             }
         }
         private AirShort ParseAirShort()
         {
             AirShort airShort = new AirShort();
-            airShort.BeginPoint = ParsePoint();
+            airShort.BeginKeyframe = ParsePoint();
             return airShort;
         }
         private AirLong ParseAirLong()
         {
-            Point point = new Point();
-            point = ParsePoint();
+            Keyframe keyframe = new Keyframe();
+            keyframe = ParsePoint();
 
             Eat(TokenType.ColonToken);
             ValueLiteral<int> attribute = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
@@ -291,8 +291,8 @@ namespace Ruwa.Objects
             if (AirLongPoint.ContainsKey(id.Value))
             {
                 AirLong airLong = new AirLong();
-                airLong.BeginPoint = AirLongPoint[id.Value];
-                airLong.EndPoint = point;
+                airLong.BeginKeyframe = AirLongPoint[id.Value];
+                airLong.EndKeyframe = keyframe;
 
                 AirLongPoint.Remove(id.Value);
                 return airLong;
@@ -301,7 +301,7 @@ namespace Ruwa.Objects
             // 시작점일 때, 시작점 기록후 덤프값 리턴
             else if (attribute.Value == (int)GameObjectAttibuteType.Begin)
             {
-                AirLongPoint.Add(id.Value, point);
+                AirLongPoint.Add(id.Value, keyframe);
                 AirLong airLong = new AirLong();
                 airLong.IsDump = true;
                 return airLong;
@@ -310,13 +310,13 @@ namespace Ruwa.Objects
             // 시작점이 없는데 끝점이 나올때, 폭발
             else
             {
-                throw new Exception($"Unexcepted end token {point}");
+                throw new Exception($"Unexcepted end token {keyframe}");
             }
         }
         private AirMove ParseAirMove()
         {
             AirMove airMove = new AirMove();
-            airMove.BeginPoint = ParsePoint();
+            airMove.BeginKeyframe = ParsePoint();
             Eat(TokenType.ColonToken);
             ValueLiteral<int> direction = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
 
@@ -338,32 +338,32 @@ namespace Ruwa.Objects
 
             return airMove;
         }
-        private Point ParsePoint()
+        private Keyframe ParsePoint()
         {
-            Point point = new Point();
+            Keyframe keyframe = new Keyframe();
             Eat(TokenType.ValueLiteral);
             Eat(TokenType.CommaToken);
 
             var bar = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
-            point.Bar = bar.Value;
+            keyframe.Bar = bar.Value;
             Eat(TokenType.CommaToken);
 
             var curBeat = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
-            point.CurBeat = curBeat.Value;
+            keyframe.CurBeat = curBeat.Value;
             Eat(TokenType.CommaToken);
 
             var fullBeat = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
-            point.FullBeat = fullBeat.Value;
+            keyframe.FullBeat = fullBeat.Value;
             Eat(TokenType.CommaToken);
 
             var postion = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
-            point.Position = postion.Value;
+            keyframe.Position = postion.Value;
             Eat(TokenType.CommaToken);
 
             var size = Eat(TokenType.ValueLiteral) as ValueLiteral<int>;
-            point.Size = size.Value;
+            keyframe.Size = size.Value;
 
-            return point;
+            return keyframe;
         }
         #endregion Parse
     }

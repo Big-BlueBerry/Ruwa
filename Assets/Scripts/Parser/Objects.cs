@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Ruwa.Objects
 {
@@ -22,11 +23,11 @@ namespace Ruwa.Objects
 
     class Sheet
     {
-        public List<GameObject> Points { get; set; }
+        public List<Note> Points { get; set; }
     }
 
     #region Foundations
-    class Point
+    public struct Keyframe
     {
         public int Bar { get; set; }
         public int FullBeat { get; set; }
@@ -34,15 +35,15 @@ namespace Ruwa.Objects
         public int Position { get; set; }
         public int Size { get; set; }
     }
-    abstract class GameObject
+    public abstract class Note : MonoBehaviour
     {
-        public Point BeginPoint { get; set; }
+        public Keyframe BeginKeyframe { get; set; }
     }
-    abstract class Unholdable : GameObject { }
-    abstract class Holdable: GameObject
+    public abstract class Unholdable : Note { }
+    public abstract class Holdable: Note
     {
         public bool IsDump;
-        public Point EndPoint { get; set; }
+        public Keyframe EndKeyframe { get; set; }
     }
     #endregion
 
@@ -51,7 +52,7 @@ namespace Ruwa.Objects
     class Hold : Holdable { }
     class Slide : Holdable
     {
-        public List<Point> Points;
+        public List<Keyframe> Points;
     }
     class AirShort : Unholdable { }
     class AirLong : Holdable { }

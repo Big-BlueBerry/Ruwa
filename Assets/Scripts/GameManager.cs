@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Ruwa.Objects;
 using UnityEngine;
 using UnityEngine.UI;
+using GameObject = UnityEngine.GameObject;
 using Random = System.Random;
 
 namespace Assets.Scripts
@@ -12,43 +15,35 @@ namespace Assets.Scripts
         public AudioSource BackgroundMusicSource;
         public Text TestText;
         public Text TestText2;
-        public GameObject NoteContainer;
-        public GameObject NotePrefab;
         public TestKeyInput InputManager;
 
-        public float NoteSpeed = 1;
+        public GameObject NoteContainer;
+        public GameObject TabPrefab;
+        public GameObject HoldPrefab;
 
-        //public Queue<float> Notes = new Queue<float>();
-        public List<ShortNote> Notes = new List<ShortNote>();
+        public float NoteSpeed = 1;
+        
+        public List<Note> Notes = new List<Note>();
+        public List<Holdable> HoldingNotes = new List<Holdable>();
+        public List<Ruwa.Objects.Note> NoteDatas = new List<Ruwa.Objects.Note>();
 
         public float sync = 0;
         private int n = 0;
 
         private const float JUDGE = 0.033f;
 
-        // Use this for initialization
+
         private void Start()
         {
-            var ran = new Random();
-            foreach (var a in Enumerable.Range(2, 100))
+            foreach (var a in NoteDatas)
             {
-                foreach (var b in Enumerable.Range(1, 4))
+                if (a is Ruwa.Objects.Tab)
                 {
-                    var CurNoteGO = Instantiate(NotePrefab, NoteContainer.transform);
-                    var CurNote = CurNoteGO.GetComponent<ShortNote>();
-
-                    CurNote.Timing = GetTime(a, b, 4, 143);
-                    CurNote.Position = ran.Next(4)+1;
-                    CurNote.Width = 1;
-
-                    Notes.Add(CurNote);
-
-                    CurNoteGO.transform.position = new Vector2(
-                        (CurNote.Position - 1) * 0.5f - 4 + CurNote.Width / 4f,
-                        CurNote.Timing * NoteSpeed
-                    );
-
-                    CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, 0.1f, 1);
+                    CreateNote((Ruwa.Objects.Tab) a);
+                }   
+                else if (a is Ruwa.Objects.Hold)
+                {
+                    CreateNote((Ruwa.Objects.Hold) a);
                 }
             }
         }
@@ -59,7 +54,45 @@ namespace Assets.Scripts
             return (float)(res);
         }
 
-        // Update is called once per frame
+        private void CreateNote(Ruwa.Objects.Tab note)
+        {
+            var CurNoteGO = Instantiate(TabPrefab, NoteContainer.transform);
+            var CurNote = CurNoteGO.GetComponent<Tab>();
+
+            CurNote.Time = GetTime(note.BeginKeyframe.Bar, note.BeginKeyframe.CurBeat, note.BeginKeyframe.FullBeat, 143);
+            CurNote.Position = note.BeginKeyframe.Position;
+            CurNote.Width = note.BeginKeyframe.Size;
+
+            Notes.Add(CurNote);
+
+            CurNoteGO.transform.position = new Vector2(
+                (CurNote.Position - 1) * 0.5f - 4 + CurNote.Width / 4f,
+                CurNote.Time * NoteSpeed
+            );
+
+            CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, 0.1f, 1);
+        }
+
+        private void CreateNote(Ruwa.Objects.Hold note)
+        {
+            var CurNoteGO = Instantiate(TabPrefab, NoteContainer.transform);
+            var CurNote = CurNoteGO.GetComponent<Hold>();
+
+            CurNote.Time = GetTime(note.BeginKeyframe.Bar, note.BeginKeyframe.CurBeat, note.BeginKeyframe.FullBeat, 143);
+            CurNote.EndTime = GetTime(note.EndKeyframe.Bar, note.EndKeyframe.CurBeat, note.EndKeyframe.FullBeat, 143);
+            CurNote.Position = note.BeginKeyframe.Position;
+            CurNote.Width = note.BeginKeyframe.Size;
+
+            Notes.Add(CurNote);
+
+            CurNoteGO.transform.position = new Vector2(
+                (CurNote.Position - 1) * 0.5f - 4 + CurNote.Width / 4f,
+                CurNote.Time * NoteSpeed
+            );
+
+            CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, 0.1f, 1);
+        }
+        
         private void Update ()
         {
             if (Input.GetKeyDown(KeyCode.Return))
@@ -71,7 +104,6 @@ namespace Assets.Scripts
             NoteContainer.transform.position = new Vector2(0, -(BackgroundMusicSource.time * NoteSpeed + 4));
 
             MissCheck();
-            
             JudgeNote();
         }
 
@@ -84,9 +116,9 @@ namespace Assets.Scripts
                 if (!InputManager.IsPressed(i)) continue;
                 
                 var cnt = 0;
-                while (true)
+                while (Notes.Count > 0)
                 {
-                    if (Notes[cnt++].Timing + sync - nowTime > JUDGE * 4) break;
+                    if (Notes[cnt++].Time + sync - nowTime > JUDGE * 4) break;
 
                     var curNote = Notes[cnt - 1];
 
@@ -94,21 +126,23 @@ namespace Assets.Scripts
 
                     if (curNote.Position <= i && curNote.Position + curNote.Width - 1 >= i)
                     {
-                        if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE)
+                        if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE)
                         {
-                            TestText2.text = n++ + "\t" + "JUSTICE";
+                            TestText2.text = ++n + "\t" + "JUSTICE";
                         }
-                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 2.5)
+                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 2.5)
                         {
-                            TestText2.text = n++ + "\t" + "PERFECT";
+                            TestText2.text = ++n + "\t" + "PERFECT";
                         }
-                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 4)
+                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 4)
                         {
-                            TestText2.text = n++ + "\t" + "ATTACK";
+                            n = 0;
+                            TestText2.text = n + "\t" + "ATTACK";
                         }
-                        else if (Math.Abs(nowTime - curNote.Timing + sync) < JUDGE * 5)
+                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 5)
                         {
-                            TestText2.text = n++ + "\t" + "MISS";
+                            n = 0;
+                            TestText2.text = n + "\t" + "MISS";
                         }
 
                         Notes.RemoveAt(cnt-- - 1);
@@ -120,57 +154,50 @@ namespace Assets.Scripts
 
         private void MissCheck()
         {
-            while (BackgroundMusicSource.time - (Notes.First().Timing + sync) > JUDGE * 4)
+            while (Notes.Count > 0 && BackgroundMusicSource.time - (Notes.First().Time + sync) > JUDGE * 4)
             {
-                TestText2.text = n++ + "\t" + "MISS";
+                n = 0;
+                TestText2.text = n + "\t" + "MISS";
                 Destroy(Notes.First().gameObject);
                 Notes.RemoveAt(0);
             }
         }
 
-        /*
-        private void JudgeNote()
+        IEnumerator HoldChecker()
         {
-            var nowTime = BackgroundMusicSource.time;
-            if (Input.GetKeyDown(KeyCode.RightArrow) && Notes.Count > 0)
+            for (var j = 0; j < HoldingNotes.Count; j++)
             {
-                //var NextTiming = Notes.First;
+                var noteWidth = HoldingNotes[j].Width;
+                var notePos = HoldingNotes[j].Position;
 
+                bool res = false;
+                for (int t = notePos; t <= noteWidth; t++)
+                {
+                    if (HoldingNotes[j] is Hold)
+                    {
+                        res = true;
+                        break;
+                    }
+                    // 에어 홀드 처리는 요기서 해주세용~~~
+                }
 
-                if (Math.Abs(nowTime - NextTiming + sync) < JUDGE)
+                if (res)
                 {
-                    TestText2.text = n++ + "\t" + "JUSTICE";
-                }
-                else if (Math.Abs(nowTime - NextTiming + sync) < JUDGE * 2.5)
-                {
-                    TestText2.text = n++ + "\t" + "PERFECT";
-                }
-                else if (Math.Abs(nowTime - NextTiming + sync) < JUDGE * 4)
-                {
-                    TestText2.text = n++ + "\t" + "ATTACK";
-                }
-                else if (Math.Abs(nowTime - NextTiming + sync) < JUDGE * 5)
-                {
-                    TestText2.text = n++ + "\t" + "MISS";
+                    TestText2.text = ++n + "\t" + "JUSTICE";
                 }
                 else
                 {
-                    TestText2.text = n++ + "\t" + "?";
-                    return;
+                    n = 0;
+                    TestText2.text = n + "\t" + "Miss";
+                    Destroy(HoldingNotes[j]);
+                    HoldingNotes.RemoveAt(j--);
                 }
-
-                // ReSharper disable once SpecifyACultureInStringConversionExplicitly
-                TestText.text = (BackgroundMusicSource.time - NextTiming + sync).ToString();
-                Notes.Dequeue();
             }
-            else
-            {
-                if (Notes.Count <= 0 || !(BackgroundMusicSource.time - Notes.Peek() + sync > JUDGE * 5)) return;
 
-                TestText2.text = n++ + "\t" + "MISS";
-                Notes.Dequeue();
-            }
+            yield return new WaitForSeconds(0.5f);
+
+            if (BackgroundMusicSource.isPlaying)
+                StartCoroutine("HoldChecker");
         }
-        */
     }
 }

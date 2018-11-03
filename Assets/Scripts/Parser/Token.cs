@@ -17,7 +17,12 @@
     abstract class Token
     {
         public TokenType Type { get; set; }
-        public Token() => Type = TokenType.EmptyToken;
+
+        public Token()
+        {
+            Type = TokenType.EmptyToken;
+        } 
+
         public virtual string ToString() => Type.ToString();
     }
 
