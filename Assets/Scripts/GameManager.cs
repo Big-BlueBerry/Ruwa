@@ -27,11 +27,16 @@ namespace Assets.Scripts
         public List<Holdable> HoldingNotes = new List<Holdable>();
         public List<Ruwa.Objects.Note> NoteDatas = new List<Ruwa.Objects.Note>();
 
-        public float sync = 0;
-        private int n = 0;
+        public float Sync = 0;
+        private int ComboCount = 0;
+        //private int n = 0;
 
-        private const float JUDGE = 0.033f;
-
+        private const float Judge = 0.033f;
+        private const int MaxLineCount = 16;
+        private const string JusticeJudgeText = "JUSTICE";
+        private const string PerfectJudgeText = "PERFECT";
+        private const string AttackudgeText = "ATTACK";
+        private const string MissJudgeText = "MISS";
 
         private void Start()
         {
@@ -47,6 +52,21 @@ namespace Assets.Scripts
                 }
             }
         }
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Return))
+                BackgroundMusicSource.Play();
+
+            if (!BackgroundMusicSource.isPlaying)
+                return;
+
+            NoteContainer.transform.position = new Vector2(0, -(BackgroundMusicSource.time * NoteSpeed + 4));
+
+            MissCheck();
+            JudgeNote();
+        }
+
 
         private static float GetTime(int bar, int beat, int beatSplit, int bpm)
         {
@@ -92,57 +112,45 @@ namespace Assets.Scripts
 
             CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, 0.1f, 1);
         }
-        
-        private void Update ()
-        {
-            if (Input.GetKeyDown(KeyCode.Return))
-                BackgroundMusicSource.Play();
-
-            if (!BackgroundMusicSource.isPlaying)
-                return;
-
-            NoteContainer.transform.position = new Vector2(0, -(BackgroundMusicSource.time * NoteSpeed + 4));
-
-            MissCheck();
-            JudgeNote();
-        }
 
         private void JudgeNote()
         {
             var nowTime = BackgroundMusicSource.time;
 
-            for (var i = 1; i <= 16; i++)
+            for (var line = 1; line <= MaxLineCount; line++)
             {
-                if (!InputManager.IsPressed(i)) continue;
+                if (!InputManager.IsPressed(line)) continue;
                 
                 var cnt = 0;
                 while (Notes.Count > 0)
                 {
-                    if (Notes[cnt++].Time + sync - nowTime > JUDGE * 4) break;
+                    if (Notes[cnt++].Time + Sync - nowTime > Judge * 4) break;
 
                     var curNote = Notes[cnt - 1];
 
                     Debug.Log(curNote.Position + " / " + curNote.Width);
 
-                    if (curNote.Position <= i && curNote.Position + curNote.Width - 1 >= i)
+                    if (curNote.Position <= line && curNote.Position + curNote.Width - 1 >= line)
                     {
-                        if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE)
+                        var parallax = Math.Abs(nowTime - curNote.Time + Sync);
+                        if (parallax < Judge)
                         {
-                            TestText2.text = ++n + "\t" + "JUSTICE";
+                            TestText2.text = ++ComboCount + "\t" + JusticeJudgeText;
                         }
-                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 2.5)
+                        else if (parallax < Judge * 2.5)
                         {
-                            TestText2.text = ++n + "\t" + "PERFECT";
+                            TestText2.text = ++ComboCount + "\t" + PerfectJudgeText;
                         }
-                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 4)
+
+                        else if (parallax < Judge * 4)
                         {
-                            n = 0;
-                            TestText2.text = n + "\t" + "ATTACK";
+                            ComboCount = 0;
+                            TestText2.text = ComboCount + "\t" + AttackudgeText;
                         }
-                        else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 5)
+                        else if (parallax < Judge * 5)
                         {
-                            n = 0;
-                            TestText2.text = n + "\t" + "MISS";
+                            ComboCount = 0;
+                            TestText2.text = ComboCount + "\t" + MissJudgeText;
                         }
 
                         Notes.RemoveAt(cnt-- - 1);
@@ -154,10 +162,10 @@ namespace Assets.Scripts
 
         private void MissCheck()
         {
-            while (Notes.Count > 0 && BackgroundMusicSource.time - (Notes.First().Time + sync) > JUDGE * 4)
+            while (Notes.Count > 0 && BackgroundMusicSource.time - (Notes.First().Time + Sync) > Judge * 4)
             {
-                n = 0;
-                TestText2.text = n + "\t" + "MISS";
+                ComboCount = 0;
+                TestText2.text = ComboCount + "\t" + MissJudgeText;
                 Destroy(Notes.First().gameObject);
                 Notes.RemoveAt(0);
             }
@@ -178,17 +186,17 @@ namespace Assets.Scripts
                         res = true;
                         break;
                     }
-                    // 에어 홀드 처리는 요기서 해주세용~~~
+                    // 에어 홀드 처리는 요기서 해주세용~~~. :yes:
                 }
 
                 if (res)
                 {
-                    TestText2.text = ++n + "\t" + "JUSTICE";
+                    TestText2.text = ++ComboCount + "\t" + JusticeJudgeText;
                 }
                 else
                 {
-                    n = 0;
-                    TestText2.text = n + "\t" + "Miss";
+                    ComboCount = 0;
+                    TestText2.text = ComboCount + "\t" + MissJudgeText;
                     Destroy(HoldingNotes[j]);
                     HoldingNotes.RemoveAt(j--);
                 }
