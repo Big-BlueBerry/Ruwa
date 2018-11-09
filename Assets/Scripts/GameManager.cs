@@ -5,8 +5,6 @@ using System.Linq;
 using Ruwa.Objects;
 using UnityEngine;
 using UnityEngine.UI;
-using GameObject = UnityEngine.GameObject;
-using Random = System.Random;
 
 namespace Assets.Scripts
 {
@@ -22,7 +20,7 @@ namespace Assets.Scripts
         public GameObject HoldPrefab;
 
         public float NoteSpeed = 1;
-        
+
         public List<Note> Notes = new List<Note>();
         public List<Holdable> HoldingNotes = new List<Holdable>();
         public List<Ruwa.Objects.Note> NoteDatas = new List<Ruwa.Objects.Note>();
@@ -35,15 +33,46 @@ namespace Assets.Scripts
 
         private void Start()
         {
+            var ran = new System.Random();
+            foreach (var a in Enumerable.Range(2, 100))
+            {
+
+                foreach (var b in Enumerable.Range(0, 2))
+                {
+                    var pos = ran.Next(4);
+                    NoteDatas.Add(
+                        new Ruwa.Objects.Hold()
+                        {
+                            BeginKeyframe = new Ruwa.Objects.Keyframe()
+                            {
+                                Bar = a,
+                                CurBeat = b*2 + 1,
+                                FullBeat = 4,
+                                Position = pos * 2 + 1,
+                                Size = 2
+                            },
+                            EndKeyframe = new Ruwa.Objects.Keyframe()
+                            {
+                                Bar = a,
+                                CurBeat = b*2 + 3,
+                                FullBeat = 4,
+                                Position = pos * 2 + 1,
+                                Size = 2
+                            }
+                        }
+                        );
+                }
+            }
+
             foreach (var a in NoteDatas)
             {
                 if (a is Ruwa.Objects.Tab)
                 {
-                    CreateNote((Ruwa.Objects.Tab) a);
-                }   
+                    CreateNote((Ruwa.Objects.Tab)a);
+                }
                 else if (a is Ruwa.Objects.Hold)
                 {
-                    CreateNote((Ruwa.Objects.Hold) a);
+                    CreateNote((Ruwa.Objects.Hold)a);
                 }
             }
         }
@@ -75,7 +104,7 @@ namespace Assets.Scripts
 
         private void CreateNote(Ruwa.Objects.Hold note)
         {
-            var CurNoteGO = Instantiate(TabPrefab, NoteContainer.transform);
+            var CurNoteGO = Instantiate(HoldPrefab, NoteContainer.transform);
             var CurNote = CurNoteGO.GetComponent<Hold>();
 
             CurNote.Time = GetTime(note.BeginKeyframe.Bar, note.BeginKeyframe.CurBeat, note.BeginKeyframe.FullBeat, 143);
@@ -87,16 +116,19 @@ namespace Assets.Scripts
 
             CurNoteGO.transform.position = new Vector2(
                 (CurNote.Position - 1) * 0.5f - 4 + CurNote.Width / 4f,
-                CurNote.Time * NoteSpeed
+                CurNote.Time * NoteSpeed + (CurNote.EndTime - CurNote.Time) * NoteSpeed / 2
             );
 
-            CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, 0.1f, 1);
+            CurNoteGO.transform.localScale = new Vector3(CurNote.Width / 2f, (CurNote.EndTime - CurNote.Time) * NoteSpeed, 1);
         }
-        
-        private void Update ()
+
+        private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Return))
+            {
                 BackgroundMusicSource.Play();
+                StartCoroutine("HoldChecker");
+            }
 
             if (!BackgroundMusicSource.isPlaying)
                 return;
@@ -104,6 +136,7 @@ namespace Assets.Scripts
             NoteContainer.transform.position = new Vector2(0, -(BackgroundMusicSource.time * NoteSpeed + 4));
 
             MissCheck();
+            HoldCheck();
             JudgeNote();
         }
 
@@ -114,18 +147,52 @@ namespace Assets.Scripts
             for (var i = 1; i <= 16; i++)
             {
                 if (!InputManager.IsPressed(i)) continue;
-                
+
                 var cnt = 0;
                 while (Notes.Count > 0)
                 {
                     if (Notes[cnt++].Time + sync - nowTime > JUDGE * 4) break;
 
-                    var curNote = Notes[cnt - 1];
-
-                    Debug.Log(curNote.Position + " / " + curNote.Width);
-
-                    if (curNote.Position <= i && curNote.Position + curNote.Width - 1 >= i)
+                    if (Notes[cnt - 1] is Tab)
                     {
+                        var curNote = Notes[cnt - 1];
+
+                        Debug.Log(curNote.Position + " / " + curNote.Width);
+
+                        if (curNote.Position <= i && curNote.Position + curNote.Width - 1 >= i)
+                        {
+                            if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE)
+                            {
+                                TestText2.text = ++n + "\t" + "JUSTICE";
+                            }
+                            else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 2.5)
+                            {
+                                TestText2.text = ++n + "\t" + "PERFECT";
+                            }
+                            else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 4)
+                            {
+                                n = 0;
+                                TestText2.text = n + "\t" + "ATTACK";
+                            }
+                            else if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE * 5)
+                            {
+                                n = 0;
+                                TestText2.text = n + "\t" + "MISS";
+                            }
+
+                            Notes.RemoveAt(cnt-- - 1);
+                            Destroy(curNote.gameObject);
+                        }
+
+                    }
+                    else if (Notes[cnt - 1] is Hold)
+                    {
+                        var curNote = Notes[cnt - 1];
+
+                        Debug.Log(curNote.Position + " / " + curNote.Width);
+
+                        if (curNote.Position > i || curNote.Position + curNote.Width - 1 < i) continue;
+
                         if (Math.Abs(nowTime - curNote.Time + sync) < JUDGE)
                         {
                             TestText2.text = ++n + "\t" + "JUSTICE";
@@ -143,10 +210,14 @@ namespace Assets.Scripts
                         {
                             n = 0;
                             TestText2.text = n + "\t" + "MISS";
-                        }
 
+                            Notes.RemoveAt(cnt-- - 1);
+                            Destroy(curNote.gameObject);
+                            continue;
+                        }
+                        
+                        HoldingNotes.Add(curNote as Holdable);
                         Notes.RemoveAt(cnt-- - 1);
-                        Destroy(curNote.gameObject);
                     }
                 }
             }
@@ -154,50 +225,60 @@ namespace Assets.Scripts
 
         private void MissCheck()
         {
-            while (Notes.Count > 0 && BackgroundMusicSource.time - (Notes.First().Time + sync) > JUDGE * 4)
+            while (Notes.Count > 0 && BackgroundMusicSource.time - (Notes[0].Time + sync) > JUDGE * 4)
             {
                 n = 0;
                 TestText2.text = n + "\t" + "MISS";
-                Destroy(Notes.First().gameObject);
+                Destroy(Notes[0].gameObject);
                 Notes.RemoveAt(0);
+            }
+
+            for (var i = 0; i < HoldingNotes.Count; i++)
+            {
+                var curNote = HoldingNotes[i];
+
+                if (curNote.EndTime <= BackgroundMusicSource.time)
+                {
+                    HoldingNotes.RemoveAt(i--);
+                    Destroy(curNote.gameObject);
+                }
             }
         }
 
-        IEnumerator HoldChecker()
+        private void HoldCheck()
         {
-            for (var j = 0; j < HoldingNotes.Count; j++)
-            {
-                var noteWidth = HoldingNotes[j].Width;
-                var notePos = HoldingNotes[j].Position;
+            var dt = Time.fixedDeltaTime;
 
-                bool res = false;
-                for (int t = notePos; t <= noteWidth; t++)
+            for (var i = 0; i < HoldingNotes.Count; i++)
+            {
+                var curNote = HoldingNotes[i];
+                curNote.Cooldown += dt;
+
+                if (curNote.Cooldown < 0.3f) continue;
+
+                curNote.Cooldown -= 0.4f;
+
+                var isHolding = false;
+                for (var j = curNote.Position; j < curNote.Position + curNote.Width; j++)
                 {
-                    if (HoldingNotes[j] is Hold)
-                    {
-                        res = true;
-                        break;
-                    }
-                    // 에어 홀드 처리는 요기서 해주세용~~~
+                    if (!InputManager.IsPressing(j)) continue;
+
+                    isHolding = true;
+                    break;
                 }
 
-                if (res)
+                if (!isHolding)
                 {
-                    TestText2.text = ++n + "\t" + "JUSTICE";
+                    n = 0;
+                    TestText2.text = n + "\t" + "MISS";
+                    HoldingNotes.RemoveAt(i--);
+                    Destroy(curNote.gameObject);
                 }
                 else
                 {
-                    n = 0;
-                    TestText2.text = n + "\t" + "Miss";
-                    Destroy(HoldingNotes[j]);
-                    HoldingNotes.RemoveAt(j--);
+                    TestText2.text = ++n + "\t" + "JUSTICE";
                 }
             }
-
-            yield return new WaitForSeconds(0.5f);
-
-            if (BackgroundMusicSource.isPlaying)
-                StartCoroutine("HoldChecker");
         }
     }
 }
